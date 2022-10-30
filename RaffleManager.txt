@@ -1,9 +1,11 @@
-## APIVersion: 100014 100015
+## APIVersion: 101031 101032
 ## Title: RaffleManager
 ## Description: Management functions for simplifying guild raffles.
-## Version: 5.0.0
+## Version: 5.0.1
+## AddOnVersion: 501
 ## Author: @nooblybear
 ## SavedVariables: RaffleManager_SavedVariables
+## OptionalDependsOn: MasterMerchant>=3646 LibGuildStore>=102
 
 i18n\$(language).lua
 RaffleManager.lua

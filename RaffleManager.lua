@@ -1,5 +1,7 @@
+local internal = _G["LibGuildStore_Internal"]
+
 local ADDON_NAME = "RaffleManager"
-local ADDON_VERSION = "1.0.0"
+local ADDON_VERSION = "5.0.1"
 local SAVEDVARS_NAME = "RaffleManager_SavedVariables"
 local SAVEDVARS_VERSION = 1
 
@@ -150,7 +152,7 @@ function RaffleManager_ParseRoster ()
 
     local gname = GetGuildName(gnum)
 
-    if not MasterMerchant or not MasterMerchant.guildSales or not MasterMerchant.guildSales[gname] or not MasterMerchant.guildSales[gname].sellers then
+    if not MasterMerchant or not internal.guildSales or not internal.guildSales[gname] or not internal.guildSales[gname].sellers then
         CHAT_SYSTEM:AddMessage("Need MasterMerchant to export data!")
         return
     end
@@ -164,8 +166,8 @@ function RaffleManager_ParseRoster ()
 
         local line = {["account"] = account, sales30 = 0, sales10 = 0, purchases30 = 0, purchases10 = 0, joined = 0, rank=rank_name}
 
-        local mmd = MasterMerchant.guildSales[gname].sellers
-        local mmp = MasterMerchant.guildPurchases[gname].sellers
+        local mmd = internal.guildSales[gname].sellers
+        local mmp = internal.guildPurchases[gname].sellers
         if not mmd[account] then
             CHAT_SYSTEM:AddMessage("Skipping " .. account .. " as no MasterMerchant data.")
         else
@@ -238,8 +240,8 @@ function RaffleManager_Local ()
 
         local line = { user = account .. "_free", amount = 0, timestamp = GetTimeStamp(), id = "buy_local_"..math.random(), subject="BUY LOCAL TICKETS"}
 
-        local mmd = MasterMerchant.guildSales[gname].sellers
-        local mmp = MasterMerchant.guildPurchases[gname].sellers
+        local mmd = internal.guildSales[gname].sellers
+        local mmp = internal.guildPurchases[gname].sellers
         if not mmd[account] and not mmp[account] then
             CHAT_SYSTEM:AddMessage("Skipping " .. account .. " as no MasterMerchant data.")
         else
@@ -1042,7 +1044,11 @@ end
 -------------------------------------------------------------------------------
 
 local function OnAddonLoaded(eventCode, addonName)
-	if addonName ~= (ADDON_NAME) then return end
+  local mm_detected = false
+  if MasterMerchant then
+    if MasterMerchant.isInitialized then mm_detected = true end
+  end
+	if addonName ~= (ADDON_NAME) and not mm_detected then return end
 	
 	SavedVars = ZO_SavedVars:NewAccountWide(SAVEDVARS_NAME, SAVEDVARS_VERSION, nil, DefaultVars)
 	
