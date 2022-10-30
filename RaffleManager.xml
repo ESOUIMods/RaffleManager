@@ -1,0 +1,379 @@
+<GuiXml>
+	<Controls>
+		<Label name="RaffleManagerLabelField" font="ZoFontGame" wrapMode="ELLIPSIS" mouseEnabled="true" virtual="true">
+			<Dimensions y="21"/>
+			<OnMouseEnter>
+				RaffleManagerLabelField_OnMouseEnter(self)
+			</OnMouseEnter>
+			<OnMouseExit>
+				RaffleManagerLabelField_OnMouseExit(self)
+			</OnMouseExit>
+			<OnLinkMouseUp>
+				RaffleManagerLabelField_OnLinkMouseUp(self, button, linkText)
+			</OnLinkMouseUp>
+		</Label>
+		
+		<Control name="RaffleManagerConfirmRow" mouseEnabled="true" virtual="true">
+			<Dimensions y="29"/>
+			<OnMouseEnter>
+				RaffleManagerConfirmRow_OnMouseEnter(self)
+			</OnMouseEnter>
+			<OnMouseExit>
+				RaffleManagerConfirmRow_OnMouseExit(self)
+			</OnMouseExit>
+            <Controls>
+				<Texture name="$(parent)BG" inherits="ZO_ThinListBgStrip"/>
+				
+				<Label name="$(parent)ID" inherits="RaffleManagerLabelField" linkEnabled="true">
+					<Anchor point="LEFT"/>
+					<Dimensions x="32"/>
+				</Label>
+				
+				<Label name="$(parent)Name" inherits="RaffleManagerLabelField" linkEnabled="true">
+					<Anchor point="LEFT" relativeTo="$(parent)ID" relativePoint="RIGHT" offsetX="22"/>
+					<Dimensions x="184"/>
+				</Label>
+				
+				<Label name="$(parent)Tickets" inherits="RaffleManagerLabelField">
+					<Anchor point="LEFT" relativeTo="$(parent)Name" relativePoint="RIGHT"/>
+					<Dimensions x="72"/>
+                </Label>
+
+				<Label name="$(parent)Barter" inherits="RaffleManagerLabelField">
+					<Anchor point="LEFT" relativeTo="$(parent)Tickets" relativePoint="RIGHT"/>
+					<Dimensions x="72"/>
+				</Label>
+				
+				<Label name="$(parent)Mail" inherits="RaffleManagerLabelField">
+					<Anchor point="LEFT" relativeTo="$(parent)Barter" relativePoint="RIGHT"/>
+					<Dimensions x="100"/>
+				</Label>
+				
+			</Controls>
+		</Control>
+		
+		<Control name="RaffleManagerConfirm" virtual="true" hidden="true">
+		<AnchorFill/>
+			<OnInitialized>
+				RaffleManagerConfirm_OnInitialized(self)
+			</OnInitialized>
+			<Controls>
+				<Control name="$(parent)Headers">
+					<Anchor point="TOPLEFT" offsetX="-2" offsetY="51"/>
+					<Dimensions x="510" y="28"/>
+					<Controls>
+					
+						<Control name="$(parent)ID" inherits="ZO_SortHeader">
+							<OnInitialized>
+								ZO_SortHeader_Initialize(self, "ID", "id", ZO_SORT_ORDER_UP, TEXT_ALIGN_RIGHT, "ZoFontGameLargeBold")
+							</OnInitialized>
+							<Anchor point="TOPLEFT" offsetX="9"/>
+							<Dimensions x="32" y="28"/>
+						</Control>
+						
+						<Control name="$(parent)Name" inherits="ZO_SortHeader">
+							<OnInitialized>
+								ZO_SortHeader_Initialize(self, "NAME", "name", ZO_SORT_ORDER_UP, TEXT_ALIGN_LEFT, "ZoFontGameLargeBold")
+							</OnInitialized>
+							<Anchor point="TOPLEFT" relativeTo="$(parent)ID" relativePoint="TOPRIGHT" offsetX="21"/>
+							<Dimensions x="184" y="28"/>
+						</Control>
+						
+						<Control name="$(parent)Tickets" inherits="ZO_SortHeader">
+							<OnInitialized>
+								ZO_SortHeader_Initialize(self, "TICKETS", "tickets", ZO_SORT_ORDER_UP, TEXT_ALIGN_LEFT, "ZoFontGameLargeBold")
+							</OnInitialized>
+							<Anchor point="TOPLEFT" relativeTo="$(parent)Name" relativePoint="TOPRIGHT"/>
+							<Dimensions x="72" y="28"/>
+                        </Control>
+
+						<Control name="$(parent)Barter" inherits="ZO_SortHeader">
+							<OnInitialized>
+								ZO_SortHeader_Initialize(self, "BARTER", "barter", ZO_SORT_ORDER_UP, TEXT_ALIGN_LEFT, "ZoFontGameLargeBold")
+							</OnInitialized>
+							<Anchor point="TOPLEFT" relativeTo="$(parent)Tickets" relativePoint="TOPRIGHT"/>
+							<Dimensions x="72" y="28"/>
+						</Control>
+						
+						<Control name="$(parent)Mail" inherits="ZO_SortHeader">
+							<OnInitialized>
+								ZO_SortHeader_Initialize(self, "MAIL", "mail", ZO_SORT_ORDER_UP, TEXT_ALIGN_LEFT, "ZoFontGameLargeBold")
+							</OnInitialized>
+							<Anchor point="TOPLEFT" relativeTo="$(parent)Barter" relativePoint="TOPRIGHT"/>
+							<Dimensions x="100" y="28"/>
+						</Control>
+
+					</Controls>
+				</Control>
+				
+				<Control name="$(parent)List" inherits="ZO_ScrollList">
+					<Anchor point="TOPLEFT" relativeTo="$(parent)Headers" relativePoint="BOTTOMLEFT" offsetX="8"/>
+					<Anchor point="TOPRIGHT" relativeTo="$(parent)Headers" relativePoint="BOTTOMRIGHT"/>
+					<Dimensions y="361"/>
+				</Control>
+				
+				<Backdrop name="$(parent)ProgressBG" inherits="ZO_EditBackdrop" hidden="true">
+					<Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" offsetX="10" offsetY="-59"/>
+                    <Dimensions x="500" y="24"/>
+				</Backdrop>
+
+                <StatusBar name="$(parent)ProgressBar" color="EECA2A">
+                    <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" offsetX="10" offsetY="-59"/>
+                    <Dimensions x="0" y="24"/>
+                </StatusBar>
+				
+				<StatusBar name="$(parent)CancelProgressBar" color="C80F14">
+                    <Anchor point="TOPRIGHT" relativePoint="BOTTOMRIGHT" offsetX="-12" offsetY="-59"/>
+                    <Dimensions x="0" y="24"/>
+                </StatusBar>
+			
+				<Label name="$(parent)TotalRecipients" font="ZoFontGameLarge" color="3A92FF" text="">
+						<Anchor point="TOP" relativePoint="BOTTOM" offsetY="-59"/>
+				</Label>
+				
+				<Label name="$(parent)LastRecipient" font="ZoFontWinH3" text="">
+						<Anchor point="TOP" relativePoint="BOTTOM" offsetY="-32"/>
+				</Label>
+				
+			</Controls>
+		</Control>
+		
+		<Control name="RaffleManagerMessage" virtual="true" hidden="true">
+		<AnchorFill/>
+			<OnInitialized>
+				RaffleManagerMessage_OnInitialized(self)
+			</OnInitialized>
+            <Controls>
+				<Control name="$(parent)GuildDropdown" inherits="ZO_ComboBox">
+					<Anchor point="TOPLEFT" offsetX="13" offsetY="58"/>
+					<Dimensions x="494" y="28"/>
+				</Control>
+				
+				<Backdrop name="$(parent)Subject" inherits="ZO_EditBackdrop">
+					<Anchor point="TOPLEFT" relativeTo="$(parent)GuildDropdown" relativePoint="TOPLEFT" offsetX="0" offsetY="35"/>
+					<Dimensions x="494" y="27"/>
+						<Controls>
+							<EditBox name="$(parent)Field" inherits="ZO_DefaultEditForBackdrop" font="ZoFontGameBold">
+								
+								<OnInitialized>
+									RaffleManagerMessageSubjectField_OnInitialized(self)
+								</OnInitialized>
+								
+								<OnTextChanged>
+									RaffleManagerMessageSubjectField_OnTextChanged(self)
+								</OnTextChanged>
+								
+								<OnFocusGained>
+									RaffleManagerMessageSubjectField_OnFocusGained(self)
+								</OnFocusGained>
+								
+								<OnFocusLost>
+									RaffleManagerMessageSubjectField_OnFocusLost(self)
+								</OnFocusLost>
+
+							</EditBox>
+						</Controls>
+				</Backdrop>
+		
+				<Backdrop name="$(parent)Body" inherits="ZO_EditBackdrop">
+					<Anchor point="TOPLEFT" relativeTo="$(parent)Subject" relativePoint="BOTTOMLEFT" offsetY="8"/>
+					<Anchor point="TOPRIGHT" relativeTo="$(parent)Subject" relativePoint="BOTTOMRIGHT" offsetY="8"/>
+					<Dimensions y="330"/>
+						<Controls>
+							<EditBox name="$(parent)Field" inherits="ZO_DefaultEditMultiLineForBackdrop" font="ZoFontGameBold">
+								<OnTextChanged>
+									RaffleManagerMessageBodyField_OnTextChanged(self)
+								</OnTextChanged>
+							</EditBox>
+						</Controls>
+				</Backdrop>
+				
+				<Button name="$(parent)SendButton" inherits="ZO_DefaultButton" hidden="false" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="SI_RAFFLEMANAGER_COMPOSE_BUTTON_SEND">
+					<Anchor point="BOTTOM" relativePoint="BOTTOM" offsetY="-12"/>
+					<Dimensions x="150" y="27"/>
+					<OnClicked>
+						RaffleManagerMessageSendButton_OnClicked(self)
+					</OnClicked>
+				</Button>
+				
+				<Button name="$(parent)CancelButton" inherits="ZO_DefaultButton" hidden="true" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="SI_RAFFLEMANAGER_COMPOSE_BUTTON_CANCEL">
+					<Anchor point="BOTTOM" relativePoint="BOTTOM" offsetX="-90" offsetY="-12"/>
+					<Dimensions x="150" y="27"/>
+					<OnClicked>
+						RaffleManagerMessageCancelButton_OnClicked(self)
+					</OnClicked>
+				</Button>
+				
+				<Button name="$(parent)PauseButton" inherits="ZO_DefaultButton" hidden="true" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="SI_RAFFLEMANAGER_COMPOSE_BUTTON_PAUSE">
+					<Anchor point="BOTTOM" relativePoint="BOTTOM" offsetX="90" offsetY="-12"/>
+					<Dimensions x="150" y="27"/>
+					<OnClicked>
+						RaffleManagerMessagePauseButton_OnClicked(self)
+					</OnClicked>
+				</Button>
+				
+				<Button name="$(parent)ContinueButton" inherits="ZO_DefaultButton" hidden="true" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="SI_RAFFLEMANAGER_COMPOSE_BUTTON_CONTINUE">
+					<Anchor point="BOTTOM" relativePoint="BOTTOM" offsetX="90" offsetY="-12"/>
+					<Dimensions x="150" y="27"/>
+					<OnClicked>
+						RaffleManagerMessageContinueButton_OnClicked(self)
+					</OnClicked>
+				</Button>
+
+				<Label name="$(parent)CharacterLimit" font="ZoFontWinH3" text="0/700">
+						<Anchor point="TOPRIGHT" relativeTo="$(parent)Body" relativePoint="BOTTOMRIGHT" offsetY="3"/>
+				</Label>
+				
+			</Controls>
+        </Control>
+
+		<Control name="RaffleManagerExport" virtual="true" hidden="true">
+		<AnchorFill/>
+			<OnInitialized>
+				RaffleManagerExport_OnInitialized(self)
+			</OnInitialized>
+            <Controls>
+				<Control name="$(parent)GuildDropdown" inherits="ZO_ComboBox">
+					<Anchor point="TOPRIGHT" offsetX="-48" offsetY="58"/>
+					<Dimensions x="268" y="28"/>
+                </Control>
+
+				<Button name="$(parent)ExportGuildButton" inherits="ZO_DefaultButton" hidden="false" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="SI_RAFFLEMANAGER_EXPORT_GUILD_BUTTON">
+					<Anchor point="TOPLEFT" offsetY="58" offsetX="22"/>
+					<Dimensions x="150" y="27"/>
+					<OnClicked>
+                        RaffleManager_ParseBank()
+					</OnClicked>
+                </Button>
+
+				<Button name="$(parent)ExportRosterButton" inherits="ZO_DefaultButton" hidden="false" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="SI_RAFFLEMANAGER_EXPORT_ROSTER_BUTTON">
+					<Anchor point="TOPLEFT" offsetY="98" offsetX="22"/>
+					<Dimensions x="150" y="27"/>
+					<OnClicked>
+                        RaffleManager_ParseRoster()
+					</OnClicked>
+                </Button>
+
+				<Button name="$(parent)ExportMailButton" inherits="ZO_DefaultButton" hidden="false" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="SI_RAFFLEMANAGER_EXPORT_MAIL_BUTTON">
+					<Anchor point="TOPLEFT" offsetY="138" offsetX="22"/>
+					<Dimensions x="150" y="27"/>
+					<OnClicked>
+                        RaffleManager_ParseMail()
+					</OnClicked>
+                </Button>
+
+				<Button name="$(parent)ReloadButton" inherits="ZO_DefaultButton" hidden="false" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="SI_RAFFLEMANAGER_RELOAD_BUTTON">
+					<Anchor point="TOPRIGHT" offsetY="98" offsetX="-98"/>
+					<Dimensions x="150" y="27"/>
+					<OnClicked>
+                        ReloadUI()
+					</OnClicked>
+                </Button>
+
+				<Label name="$(parent)Settings" font="ZoFontWinH3" text="Settings:" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL">
+						<Anchor point="TOPLEFT" relativeTo="$(parent)ExportMailButton" relativePoint="BOTTOMLEFT" offsetY="12"/>
+                </Label>
+
+				<Label name="$(parent)DaysLabel" font="ZoFontWinH4" text="Days" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL">
+						<Anchor point="TOPLEFT" relativeTo="$(parent)Settings" relativePoint="BOTTOMLEFT" offsetY="12"/>
+                </Label>
+
+				<Control name="$(parent)DaysDropdown" inherits="ZO_ComboBox">
+                    <Anchor point="LEFT" relativeTo="$(parent)DaysLabel" relativePoint="RIGHT" offsetX="48"/>
+                    <Dimensions x="80" y="28"/>
+                </Control>
+
+                <Label name="$(parent)TicketCostLabel" font="ZoFontWinH4" text="Ticket Cost" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL">
+						<Anchor point="TOPLEFT" relativeTo="$(parent)DaysLabel" relativePoint="TOPLEFT" offsetX="240"/>
+                    </Label>
+
+				<Backdrop name="$(parent)TicketCost" inherits="ZO_EditBackdrop">
+					<Anchor point="RIGHT" relativeTo="$(parent)TicketCostLabel" relativePoint="RIGHT" offsetX="138"/>
+					<Dimensions x="130" y="27"/>
+						<Controls>
+                            <EditBox name="$(parent)Field" inherits="ZO_DefaultEditForBackdrop" font="ZoFontGameBold">
+								<OnTextChanged>
+									RaffleManagerMessageCostField_OnTextChanged(self)
+								</OnTextChanged>
+							</EditBox>
+						</Controls>
+				</Backdrop>
+
+                <Label name="$(parent)Confirmation" font="ZoFontWinH3" text="Confirmations:" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL">
+                <Anchor point="TOPLEFT" relativeTo="$(parent)DaysLabel" relativePoint="BOTTOMLEFT" offsetY="12"/>
+                </Label>
+
+				<Backdrop name="$(parent)Import" inherits="ZO_EditBackdrop">
+					<Anchor point="TOPLEFT" relativeTo="$(parent)Confirmation" relativePoint="BOTTOMLEFT" offsetX="-10" offsetY="8" />
+					<Dimensions y="220" x="494"/>
+						<Controls>
+							<EditBox name="$(parent)Field" inherits="ZO_DefaultEditMultiLineForBackdrop" font="ZoFontGameBold">
+								<OnTextChanged>
+                                    RaffleManagerImportField_OnTextChanged(self)
+								</OnTextChanged>
+							</EditBox>
+						</Controls>
+				</Backdrop>
+
+            </Controls>
+
+		</Control>
+		
+		<TopLevelControl name="RaffleManagerWindow" movable="true" mouseEnabled="true" hidden="true">
+			<Anchor point="LEFT" relativeTo="GuiRoot" offsetX="500" offsetY="0"/>
+			<Dimensions x="522" y="515"/>
+			
+			<OnInitialized>
+				RaffleManagerWindow_OnInitialized(self)
+			</OnInitialized>
+				
+				<Controls>
+				
+					<Backdrop name="$(parent)BG" inherits="ZO_DefaultBackdrop">
+						<AnchorFill/>
+					</Backdrop>
+					
+					<Texture name="$(parent)TopDivider" textureFile="EsoUI/Art/Miscellaneous/centerscreen_topDivider.dds">
+						<Dimensions y="4"/>
+						<Anchor point="TOPLEFT" offsetX="-40" offsetY="47"/>
+						<Anchor point="TOPRIGHT" offsetX="40" offsetY="47"/>
+					</Texture>
+					
+					<Label name="$(parent)Title" font="ZoFontWindowTitle" text="RaffleManager">
+						<Anchor point="TOPLEFT" offsetX="9" offsetY="7"/>
+					</Label>
+				
+					<Button name="$(parent)CloseButton" inherits="ZO_CloseButton">
+						<Anchor point="TOPRIGHT" offsetX="-7" offsetY="5"/>
+						<Dimensions x="18" y="20"/>
+						<OnClicked>
+							RaffleManagerWindowCloseButton_OnClicked(self)
+						</OnClicked>
+					</Button>
+					
+					<Control name="$(parent)MenuBar" inherits="ZO_LabelButtonBar">
+						<Anchor point="TOPRIGHT" offsetX="-38" offsetY="9"/>
+						<OnInitialized>
+							ZO_MenuBar_OnInitialized(self)
+							local barData =
+							{
+								buttonPadding = 8,
+								normalSize = 40,
+								downSize = 56,
+								animationDuration = DEFAULT_SCENE_TRANSITION_TIME,
+								buttonTemplate = "ZO_MenuBarTooltipButton",
+							}
+							ZO_MenuBar_SetData(self, barData)
+						</OnInitialized>
+					</Control>
+					
+					<Control name="$(parent)Body">
+						<Anchor point="TOPLEFT" />
+						<Anchor point="BOTTOMRIGHT"/>
+					</Control>
+
+				</Controls>
+		</TopLevelControl>
+
+    </Controls>
+</GuiXml>
