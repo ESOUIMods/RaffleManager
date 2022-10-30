@@ -1,7 +1,7 @@
 local internal = _G["LibGuildStore_Internal"]
 
 local ADDON_NAME = "RaffleManager"
-local ADDON_VERSION = "5.0.1"
+local ADDON_VERSION = "5.0.2"
 local SAVEDVARS_NAME = "RaffleManager_SavedVariables"
 local SAVEDVARS_VERSION = 1
 
@@ -176,17 +176,17 @@ function RaffleManager_ParseRoster ()
             if not mmd.sales then
                 CHAT_SYSTEM:AddMessage("No sales for " .. account)
             else
-                line.sales30 = mmd.sales[7]
+                line.sales30 = mmd.sales[MM_DATERANGE_30DAY]
                 if line.sales30 == nil then line.sales30 = 0 end
-                line.sales10 = mmd.sales[6]
+                line.sales10 = mmd.sales[MM_DATERANGE_10DAY]
                 if line.sales10 == nil then line.sales10 = 0 end
             end
 
             if not mmp or not mmp.sales then
                 CHAT_SYSTEM:AddMessage("No purchases for " .. account)
             else
-                line.purchases30 = mmp.sales[7]
-                line.purchases10 = mmp.sales[6]
+                line.purchases30 = mmp.sales[MM_DATERANGE_30DAY]
+                line.purchases10 = mmp.sales[MM_DATERANGE_10DAY]
                 if line.purchases30 == nil then line.purchases30 = 0 end
                 if line.purchases10 == nil then line.purchases10 = 0 end
             end
@@ -250,13 +250,13 @@ function RaffleManager_Local ()
             mmp = mmp[account]
             mmd = mmd[account]
             if not mmd or not mmd.sales then
-            elseif mmd.sales and mmd.sales[3] ~= nil then
-                total = total + mmd.sales[3]
+            elseif mmd.sales and mmd.sales[MM_DATERANGE_THISWEEK] ~= nil then
+                total = total + mmd.sales[MM_DATERANGE_THISWEEK]
             end
 
             if not mmp or not mmp.sales then
-            elseif mmp.sales and mmp.sales[3] ~= nil then
-                total = total + mmp.sales[3]
+            elseif mmp.sales and mmp.sales[MM_DATERANGE_THISWEEK] ~= nil then
+                total = total + mmp.sales[MM_DATERANGE_THISWEEK]
             end
 
             if total ~= 0 then
