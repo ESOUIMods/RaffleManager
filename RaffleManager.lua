@@ -310,10 +310,12 @@ end
 function _RaffleManager_ParseBank (gnum)
     local num_events = GetNumGuildEvents(gnum, GUILD_HISTORY_BANK)
 
+    --[[Replace with LibHistorie
     while RequestGuildHistoryCategoryNewest(gnum, GUILD_HISTORY_BANK) do
     end
+    --]]
 
-    CHAT_SYSTEM:AddMessage("Parsing " .. num_events .. " bank events for tickets.")
+    CHAT_SYSTEM:AddMessage("(Not Active or Updated) ; Parsing " .. num_events .. " bank events for tickets.")
 
     local events = {}
 
@@ -323,6 +325,7 @@ function _RaffleManager_ParseBank (gnum)
 
     local ten_days = 60 * 60 * 24 * tonumber(SELECTED_DAY)
 
+    --[[Replace with LibHistorie
     for i = 1, num_events do
         local etype, secs, par1, par2, par3, par4, par5, par6 = GetGuildEventInfo(gnum, GUILD_HISTORY_BANK, i)
         if etype == GUILD_EVENT_BANKGOLD_ADDED and secs < ten_days and (par2 % TICKET_COST == 0) then
@@ -335,6 +338,7 @@ function _RaffleManager_ParseBank (gnum)
     end
 
     table.sort(events, function (k1, k2) return k1.timestamp > k2.timestamp end)
+    --]]
 
     SavedVars.timestamp = GetTimeStamp()
     SavedVars.bank_data = events
@@ -548,7 +552,7 @@ function RaffleManagerExport:New(control)
     local function OnGuildSelected (_, name, choice)
         SELECTED_GUILD = name
 
-        RaffleManager_LoadEvents()
+        -- RaffleManager_LoadEvents()
     end
 
     local function OnDaySelected (_, day, choice)
