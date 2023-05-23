@@ -1,7 +1,7 @@
 local internal = _G["LibGuildStore_Internal"]
 
 local ADDON_NAME = "RaffleManager"
-local ADDON_VERSION = "5.0.3"
+local ADDON_VERSION = "5.0.4"
 local SAVEDVARS_NAME = "RaffleManager_SavedVariables"
 local SAVEDVARS_VERSION = 1
 
@@ -14,16 +14,20 @@ local RAFFLEMANAGER_PAUSED = false
 local RAFFLEMANAGER_WINDOW = nil
 local RAFFLEMANAGER_COMPOSE = nil
 local RAFFLEMANAGER_CONFIRM = nil
+local RAFFLEMANAGER_MESSAGE = nil
 local RAFFLEMANAGER_INBOX = nil
 local RAFFLEMANAGER_SENT = nil
 
+local TOTAL_CONTRIBUTION_LOOKUP = {}
+local RANK_LOOKUP = {}
+local PERCENT_LOOKUP = {}
+local PURCHASE_TAX_LOOKUP = {}
+local RAFFLE_TICKETS_LOOKUP = {}
+local AUCTIONS_LOOKUP = {}
+
 local CONFIRM_SORT_KEYS = {
-  ["id"] = { isNumeric = true },
-  ["name"] = { tiebreaker = "id" },
-  ["tickets"] = { tiebreaker = "id", isNumeric = true },
-  ["barter"] = { tiebreaker = "id", isNumeric = true },
-  ["mail"] = { tiebreaker = "id" },
-  ["rankIndex"] = { tiebreaker = "id", isNumeric = true }
+  ["name"] = { },
+  ["mail"] = { tiebreaker = "name" },
 }
 
 -- Local Variables
@@ -43,6 +47,7 @@ local Guilds = {
 
 local SELECTED_GUILD = nil
 local SELECTED_DAY = nil
+local TICKET_LIST = {}
 
 local GuildChoice = {}
 local CurrentMail = {}
@@ -247,7 +252,7 @@ function RaffleManager_ParseMail()
   CHAT_SYSTEM:AddMessage(#events .. " mail events stored. Reload your UI to updated SavedVariables.")
 end
 
-function RaffleManager_ParseBank ()
+function RaffleManager_ParseBank()
   if SELECTED_GUILD == nil then
     CHAT_SYSTEM:AddMessage("Select a guild before exporting!")
     return
@@ -258,17 +263,17 @@ function RaffleManager_ParseBank ()
     return
   end
 
-  gnum = GuildChoice[SELECTED_GUILD]
+  local gnum = GuildChoice[SELECTED_GUILD]
   return _RaffleManager_ParseBank(gnum)
 end
 
-function _RaffleManager_ParseBank (gnum)
+function _RaffleManager_ParseBank(gnum)
   local num_events = GetNumGuildEvents(gnum, GUILD_HISTORY_BANK)
 
   --[[Replace with LibHistorie
   while RequestGuildHistoryCategoryNewest(gnum, GUILD_HISTORY_BANK) do
   end
-  --]]
+  ]]--
 
   CHAT_SYSTEM:AddMessage("(Not Active or Updated) ; Parsing " .. num_events .. " bank events for tickets.")
 
@@ -293,7 +298,7 @@ function _RaffleManager_ParseBank (gnum)
   end
 
   table.sort(events, function (k1, k2) return k1.timestamp > k2.timestamp end)
-  --]]
+  ]]--
 
   SavedVars.timestamp = GetTimeStamp()
   SavedVars.bank_data = events
@@ -421,7 +426,7 @@ function RaffleManagerConfirm:New(control)
 
   manager.control = control
   manager.masterList = {}
-  manager.sortHeaderGroup:SelectHeaderByKey("id")
+  manager.sortHeaderGroup:SelectHeaderByKey("name")
 
   return manager
 end
@@ -434,11 +439,13 @@ function RaffleManagerConfirm:SetupRow(control, data)
   local playerLink = ("|H0:display:%s|h%s|h"):format(data.name, data.name)
   GetControl(control, "ID"):SetText(data.id)
   GetControl(control, "Name"):SetText(playerLink)
-  GetControl(control, "Tickets"):SetText(data.tickets)
-  GetControl(control, "Barter"):SetText(data.barter)
+  GetControl(control, "Rank"):SetText(data.rank)
+  GetControl(control, "TotalContribution"):SetText(data.totalContribution)
+  GetControl(control, "Percent"):SetText(data.percent)
+  GetControl(control, "PurchaseTax"):SetText(data.purchaseTax)
+  GetControl(control, "RaffleTickets"):SetText(data.raffleTickets)
+  GetControl(control, "Auctions"):SetText(data.auctions)
   GetControl(control, "Mail"):SetText(data.mail)
-
-  GetControl(control, "ID"):SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
 end
 
 function RaffleManagerConfirm:BuildMasterList()
@@ -513,22 +520,19 @@ function RaffleManagerExport:New(control)
   end
 
   for day = 1, 10 do
-    entry = manager.dayList:CreateItemEntry(tostring(day), OnDaySelected)
-    manager.dayList:AddItem(entry)
+    local dayEntry = manager.dayList:CreateItemEntry(tostring(day), OnDaySelected)
+    manager.dayList:AddItem(dayEntry)
   end
 
   for guildIndex = 1, GetNumGuilds() do
-    guildId = GetGuildId(guildIndex)
-    guildName = GetGuildName(guildId)
+    local guildId = GetGuildId(guildIndex)
+    local guildName = GetGuildName(guildId)
     GuildChoice[guildName] = guildId
 
-    entry = manager.guildList:CreateItemEntry(guildName, OnGuildSelected) -- Populate guild dropdown box
-    manager.guildList:AddItem(entry)
+    local guildIndexEntry = manager.guildList:CreateItemEntry(guildName, OnGuildSelected) -- Populate guild dropdown box
+    manager.guildList:AddItem(guildIndexEntry)
   end
 end
-
-local TICKET_LOOKUP = {}
-local BARTER_LOOKUP = {}
 
 local OGS = nil
 
@@ -548,7 +552,7 @@ function RaffleManagerMessage:New(control)
   manager.body = control:GetNamedChild("BodyField")
   manager.body:SetMaxInputChars(MAIL_MAX_BODY_CHARACTERS)
 
-  local guildName, guildChoiceID
+  local guildChoiceID
 
   local function OnGuildSelected (_, guildChoice, choice)
     RaffleManagerConfirmLastRecipient:SetText("")
@@ -557,8 +561,12 @@ function RaffleManagerMessage:New(control)
 
     Guilds.GuildMembers = {}
     CurrentMail["recipients"] = {}
-    TICKET_LOOKUP = {}
-    BARTER_LOOKUP = {}
+    RANK_LOOKUP = {}
+    TOTAL_CONTRIBUTION_LOOKUP = {}
+    PERCENT_LOOKUP = {}
+    PURCHASE_TAX_LOOKUP = {}
+    RAFFLE_TICKETS_LOOKUP = {}
+    AUCTIONS_LOOKUP = {}
 
     progressBarTotal = 0
     progressBarUnit = 0
@@ -572,14 +580,22 @@ function RaffleManagerMessage:New(control)
 
       if #TICKET_LIST >= 1 then
         for ti = 1, #TICKET_LIST do
-          local n, tickets, barter = unpack(TICKET_LIST[ti])
-          if tickets == nil then tickets = 0 end
-          if barter == nil then barter = 0 end
+          local n, rank, totalContribution, percent, purchaseTax, raffleTickets, auctions = unpack(TICKET_LIST[ti])
+          if rank == nil then rank = 0 end
+          if totalContribution == nil then totalContribution = 0 end
+          if percent == nil then percent = 0 end
+          if purchaseTax == nil then purchaseTax = 0 end
+          if raffleTickets == nil then raffleTickets = 0 end
+          if auctions == nil then auctions = 0 end
           n = n:gsub("%p", "%%%1")
           if name:match("^@" .. n .. "$") ~= nil then
-            TICKET_LOOKUP[name] = tickets
-            BARTER_LOOKUP[name] = barter
-            table.insert(Guilds.GuildMembers, { id = 0, name = name, mail = true, tickets = tickets, barter = barter }) -- Populate guild members table
+            RANK_LOOKUP[name] = rank
+            TOTAL_CONTRIBUTION_LOOKUP[name] = totalContribution
+            PERCENT_LOOKUP[name] = percent
+            PURCHASE_TAX_LOOKUP[name] = purchaseTax
+            RAFFLE_TICKETS_LOOKUP[name] = raffleTickets
+            AUCTIONS_LOOKUP[name] = auctions
+            table.insert(Guilds.GuildMembers, { id = 0, name = name, mail = true, rank = rank, totalContribution = totalContribution, percent = percent, purchaseTax = purchaseTax, raffleTickets = raffleTickets, auctions = auctions }) -- Populate guild members table
             break
           end
         end
@@ -602,19 +618,19 @@ function RaffleManagerMessage:New(control)
     RaffleManagerConfirmTotalRecipients:SetText("0/" .. #CurrentMail["recipients"])
     if (RAFFLEMANAGER_DEBUG) then d(guildChoice .. " (" .. #CurrentMail["recipients"] .. ")") end
 
-    progressBarUnit = (500 / #CurrentMail["recipients"])
+    progressBarUnit = (900 / #CurrentMail["recipients"])
     if (RAFFLEMANAGER_DEBUG) then d("Progress Bar Unit = " .. progressBarUnit) end
   end
 
   OGS = OnGuildSelected
 
   for guildIndex = 1, GetNumGuilds() do
-    guildId = GetGuildId(guildIndex)
-    guildName = GetGuildName(guildId)
+    local guildId = GetGuildId(guildIndex)
+    local guildName = GetGuildName(guildId)
     GuildChoice[guildName] = guildId
 
-    entry = manager.guildList:CreateItemEntry(guildName, OnGuildSelected) -- Populate guild dropdown box
-    manager.guildList:AddItem(entry)
+    local guildIndexEntry = manager.guildList:CreateItemEntry(guildName, OnGuildSelected) -- Populate guild dropdown box
+    manager.guildList:AddItem(guildIndexEntry)
 
     table.insert(Guilds.GuildNames, guildName) -- Populate guild names table
   end
@@ -635,16 +651,20 @@ local function SaveMailAsPending()
 end
 
 local function SendNextRecipient()
-  local recipient = nil
   local subject = PendingMail["subject"]
-  local body = PendingMail["body"]
+  local mailBody = PendingMail["body"]
+  local body = ""
 
   RAFFLEMANAGER_ACTIVE = true
-  recipient = PendingMail["recipients"][recipientID]
-  tickets = TICKET_LOOKUP[recipient]
-  barter = BARTER_LOOKUP[recipient]
-
-  body = zo_strformat(body, recipient, tickets, barter)
+  local recipient = PendingMail["recipients"][recipientID]
+  local rank = RANK_LOOKUP[recipient]
+  local totalContribution = TOTAL_CONTRIBUTION_LOOKUP[recipient]
+  local percent = PERCENT_LOOKUP[recipient]
+  local purchaseTax = PURCHASE_TAX_LOOKUP[recipient]
+  local raffleTickets = RAFFLE_TICKETS_LOOKUP[recipient]
+  local auctions = AUCTIONS_LOOKUP[recipient]
+  body = string.format("Hello %s,\n\n", recipient)
+  body = body .. zo_strformat(mailBody, rank, totalContribution, percent, purchaseTax, raffleTickets, auctions)
 
   if not (mailBoxOpen) then RequestOpenMailbox() end
 
@@ -884,8 +904,6 @@ function RaffleManagerMessageContinueButton_OnClicked()
   if (RAFFLEMANAGER_DEBUG) then d("RaffleManager Continued") end
 end
 
-TICKET_LIST = {}
-
 -- Import Field
 function RaffleManagerImportField_OnTextChanged(self)
   local text = RaffleManagerExportImportField:GetText()
@@ -904,9 +922,9 @@ end
 function RaffleManagerMessageCostField_OnTextChanged(self)
   TICKET_COST = tonumber(RaffleManagerExportTicketCostField:GetText())
 
-  if SavedVars then
+  --[[if SavedVars then
     SavedVars.ticket_cost = TICKET_COST
-  end
+  end]]--
 end
 
 -- Subject Field
@@ -1026,12 +1044,13 @@ local function OnAddonLoaded(eventCode, addonName)
       CurrentMail["subject"] = SavedVars.subject
       RaffleManagerMessageSubjectField:SetText(SavedVars.subject)
     end
-    if SavedVars.cost then
+    --[[if SavedVars.cost then
       TICKET_COST = tonumber(SavedVars.cost)
     else
       TICKET_COST = 1000
     end
     RaffleManagerExportTicketCostField:SetText(TICKET_COST)
+    ]]--
   end
 
   EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_MAIL_OPEN_MAILBOX, OnMailOpenMailBox)
