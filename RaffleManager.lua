@@ -1,11 +1,10 @@
 local internal = _G["LibGuildStore_Internal"]
+local LAM = LibAddonMenu2
 
 local ADDON_NAME = "RaffleManager"
-local ADDON_VERSION = "5.0.4"
+local ADDON_VERSION = "5.0.5"
 local SAVEDVARS_NAME = "RaffleManager_SavedVariables"
 local SAVEDVARS_VERSION = 1
-
-local TICKET_COST = 1000
 
 local RAFFLEMANAGER_DEBUG = true
 local RAFFLEMANAGER_ACTIVE = false
@@ -17,6 +16,7 @@ local RAFFLEMANAGER_CONFIRM = nil
 local RAFFLEMANAGER_MESSAGE = nil
 local RAFFLEMANAGER_INBOX = nil
 local RAFFLEMANAGER_SENT = nil
+local RAFFLEMANAGER_MAIL_MAX_BODY_CHARACTERS = 550
 
 local TOTAL_CONTRIBUTION_LOOKUP = {}
 local RANK_LOOKUP = {}
@@ -24,6 +24,15 @@ local PERCENT_LOOKUP = {}
 local PURCHASE_TAX_LOOKUP = {}
 local RAFFLE_TICKETS_LOOKUP = {}
 local AUCTIONS_LOOKUP = {}
+
+local AMT_DATERANGE_TODAY = 1
+local AMT_DATERANGE_YESTERDAY = 2
+local AMT_DATERANGE_THISWEEK = 3
+local AMT_DATERANGE_LASTWEEK = 4
+local AMT_DATERANGE_PRIORWEEK = 5
+local AMT_DATERANGE_7DAY = 6
+local AMT_DATERANGE_10DAY = 7
+local AMT_DATERANGE_30DAY = 8
 
 local CONFIRM_SORT_KEYS = {
   ["name"] = { },
@@ -46,8 +55,8 @@ local Guilds = {
 }
 
 local SELECTED_GUILD = nil
-local SELECTED_DAY = nil
 local TICKET_LIST = {}
+local ROSTER_EXPORT = {}
 
 local GuildChoice = {}
 local CurrentMail = {}
@@ -61,7 +70,12 @@ local sentMailCount = 0
 local recipientID = 0
 local throttleTimer = 2000
 
-local DefaultVars = {}
+local DefaultVars = {
+  ticket_cost = 1000,
+  body = "",
+  subject = "",
+  data_range = 10,
+}
 local SavedVars
 
 -- Menu Buttons
@@ -112,53 +126,92 @@ function RaffleManager_ParseRoster()
   end
 
   local data = {}
+  local export_data = {}
 
   for i = 1, GetNumGuildMembers(gnum) do
-    local account, note, rankindex, _ = GetGuildMemberInfo(gnum, i)
+    local account, note, rankindex = GetGuildMemberInfo(gnum, i)
 
     local rank_name = GetGuildRankCustomName(gnum, rankindex)
 
-    local line = { ["account"] = account, sales30 = 0, sales10 = 0, purchases30 = 0, purchases10 = 0, joined = 0, rank = rank_name }
+    local line = {
+      account = account,
+      sales10 = 0,
+      sales30 = 0,
+      salesTax10 = 0,
+      salesTax30 = 0,
+      purchases10 = 0,
+      purchases30 = 0,
+      purchaseTax10 = 0,
+      purchaseTax30 = 0,
+      joined = 0,
+      bankgoldAddedThisWeek = 0,
+      bankgoldAddedLastWeek = 0,
+      rank = rank_name,
+    }
 
-    local mmd = internal.guildSales[gname].sellers
-    local mmp = internal.guildPurchases[gname].sellers
-    if not mmd[account] and not mmp[account] then
+
+    local masterMerchantSalesAccount, masterMerchantPurchasesAccount
+    local masterMerchantSales = internal.guildSales[gname].sellers
+    local masterMerchantPurchases = internal.guildPurchases[gname].sellers
+    if not masterMerchantSales[account] and not masterMerchantPurchases[account] then
       CHAT_SYSTEM:AddMessage("Skipping " .. account .. " as no MasterMerchant data.")
     else
-      mmp = mmp[account]
-      mmd = mmd[account]
-      if not mmd or not mmd.sales then
+      masterMerchantSalesAccount = masterMerchantSales[account]
+      masterMerchantPurchasesAccount = masterMerchantPurchases[account]
+      if not masterMerchantSalesAccount or not masterMerchantSalesAccount.sales then
         CHAT_SYSTEM:AddMessage("No sales for " .. account)
       else
-        line.sales30 = mmd.sales[MM_DATERANGE_30DAY]
-        if line.sales30 == nil then line.sales30 = 0 end
-        line.sales10 = mmd.sales[MM_DATERANGE_10DAY]
+        line.sales10 = masterMerchantSalesAccount.sales[MM_DATERANGE_10DAY]
+        line.sales30 = masterMerchantSalesAccount.sales[MM_DATERANGE_30DAY]
         if line.sales10 == nil then line.sales10 = 0 end
+        if line.sales30 == nil then line.sales30 = 0 end
+        line.salesTax10 = masterMerchantSalesAccount.tax[MM_DATERANGE_10DAY]
+        line.salesTax30 = masterMerchantSalesAccount.tax[MM_DATERANGE_30DAY]
+        if line.salesTax10 == nil then line.salesTax10 = 0 end
+        if line.salesTax30 == nil then line.salesTax30 = 0 end
       end
 
-      if not mmp or not mmp.sales then
+      if not masterMerchantPurchasesAccount or not masterMerchantPurchasesAccount.sales then
         CHAT_SYSTEM:AddMessage("No purchases for " .. account)
       else
-        line.purchases30 = mmp.sales[MM_DATERANGE_30DAY]
-        line.purchases10 = mmp.sales[MM_DATERANGE_10DAY]
-        if line.purchases30 == nil then line.purchases30 = 0 end
+        line.purchases10 = masterMerchantPurchasesAccount.sales[MM_DATERANGE_10DAY]
+        line.purchases30 = masterMerchantPurchasesAccount.sales[MM_DATERANGE_30DAY]
         if line.purchases10 == nil then line.purchases10 = 0 end
+        if line.purchases30 == nil then line.purchases30 = 0 end
+        line.purchaseTax10 = masterMerchantPurchasesAccount.tax[MM_DATERANGE_10DAY]
+        line.purchaseTax30 = masterMerchantPurchasesAccount.tax[MM_DATERANGE_30DAY]
+        if line.purchaseTax10 == nil then line.purchaseTax10 = 0 end
+        if line.purchaseTax30 == nil then line.purchaseTax30 = 0 end
       end
     end
 
     if AMT ~= nil and AMT.savedData ~= nil and AMT.savedData[gname] ~= nil then
-      local r = account:lower()
-      if AMT.savedData[gname][r] ~= nil then
-        local v = AMT.savedData[gname][r].timeJoined
-        line.joined = v
+      local username = account:lower()
+      if AMT.savedData[gname][username] ~= nil then
+        local joinDate = AMT.savedData[gname][username].timeJoined
+        local bankgoldAddedThisWeek = AMT.savedData[gname][username][GUILD_EVENT_BANKGOLD_ADDED][AMT_DATERANGE_THISWEEK].total
+        local bankgoldAddedLastWeek = AMT.savedData[gname][username][GUILD_EVENT_BANKGOLD_ADDED][AMT_DATERANGE_LASTWEEK].total
+        line.joined = joinDate
+        line.bankgoldAddedThisWeek = bankgoldAddedThisWeek
+        line.bankgoldAddedLastWeek = bankgoldAddedLastWeek
       end
     end
 
+    local exportSalesTax
+    local exportPurchaseTax
+    if SavedVars.data_range == 10 then exportSalesTax = line.salesTax10
+    elseif SavedVars.data_range == 30 then exportSalesTax = line.salesTax30 end
+    if SavedVars.data_range == 10 then exportPurchaseTax = line.purchaseTax10
+    elseif SavedVars.data_range == 30 then exportPurchaseTax = line.purchaseTax30 end
+
+    local exportLine = string.format("%s&%s&%s&%s&%s", line.account, exportSalesTax, exportPurchaseTax, line.bankgoldAddedThisWeek, line.joined)
+    table.insert(export_data, exportLine)
     table.insert(data, line)
   end
 
   SavedVars.roster_timestamp = GetTimeStamp()
   SavedVars.roster_data = data
+  SavedVars.roster_export_data = export_data
 end
 
 function RaffleManager_FreeTickets()
@@ -238,15 +291,20 @@ end
 
 function RaffleManager_ParseMail()
   local events = {}
+  local export = {}
 
   for i in ZO_GetNextMailIdIter do
     local senderDisplayName, senderCharacterName, subject, icon, unread, fromSystem, fromCS, returned, numAttachments, attachedMoney, codAmount, expiresInDays, secsSinceReceived = GetMailItemInfo(i)
-    if attachedMoney ~= 0 and not returned and not fromCS and not fromSystem and subject ~= "Item Sold" and (attachedMoney % TICKET_COST == 0) then
+    if attachedMoney ~= 0 and not returned and not fromCS and not fromSystem and subject ~= "Item Sold" and (attachedMoney % SavedVars.ticket_cost == 0) then
       table.insert(events, { user = senderDisplayName, subject = subject, amount = attachedMoney, id = Id64ToString(i) })
+      local ticketCount = attachedMoney / SavedVars.ticket_cost
+      local exportString = string.format("%s&%s", senderDisplayName, ticketCount)
+      table.insert(export, exportString)
     end
   end
 
   SavedVars.mail_data = events
+  SavedVars.mail_export_data = export
   SavedVars.timestamp = GetTimeStamp()
 
   CHAT_SYSTEM:AddMessage(#events .. " mail events stored. Reload your UI to updated SavedVariables.")
@@ -279,16 +337,10 @@ function _RaffleManager_ParseBank(gnum)
 
   local events = {}
 
-  if SELECTED_DAY == nil then
-    SELECTED_DAY = "3"
-  end
-
-  local ten_days = 60 * 60 * 24 * tonumber(SELECTED_DAY)
-
   --[[Replace with LibHistorie
   for i = 1, num_events do
       local etype, secs, par1, par2, par3, par4, par5, par6 = GetGuildEventInfo(gnum, GUILD_HISTORY_BANK, i)
-      if etype == GUILD_EVENT_BANKGOLD_ADDED and secs < ten_days and (par2 % TICKET_COST == 0) then
+      if etype == GUILD_EVENT_BANKGOLD_ADDED and secs < ten_days and (par2 % SavedVars.ticket_cost == 0) then
           local user = par1
           local amount = par2
           local _ts = GetTimeStamp() - secs
@@ -503,25 +555,11 @@ function RaffleManagerExport:New(control)
   manager.guildList:SetSpacing(4)
   manager.guildList:ClearItems()
 
-  manager.dayList = ZO_ComboBox_ObjectFromContainer(GetControl(control, "DaysDropdown"))
-  manager.dayList:SetSortsItems(false)
-  manager.dayList:SetSpacing(4)
-  manager.dayList:ClearItems()
-
   manager.confirmations = control:GetNamedChild("ImportField")
   manager.confirmations:SetMaxInputChars(2000)
 
   local function OnGuildSelected (_, name, choice)
     SELECTED_GUILD = name
-  end
-
-  local function OnDaySelected (_, day, choice)
-    SELECTED_DAY = day
-  end
-
-  for day = 1, 10 do
-    local dayEntry = manager.dayList:CreateItemEntry(tostring(day), OnDaySelected)
-    manager.dayList:AddItem(dayEntry)
   end
 
   for guildIndex = 1, GetNumGuilds() do
@@ -550,7 +588,7 @@ function RaffleManagerMessage:New(control)
   manager.guildList:ClearItems()
 
   manager.body = control:GetNamedChild("BodyField")
-  manager.body:SetMaxInputChars(MAIL_MAX_BODY_CHARACTERS)
+  manager.body:SetMaxInputChars(RAFFLEMANAGER_MAIL_MAX_BODY_CHARACTERS)
 
   local guildChoiceID
 
@@ -582,6 +620,7 @@ function RaffleManagerMessage:New(control)
         for ti = 1, #TICKET_LIST do
           local n, rank, totalContribution, percent, purchaseTax, raffleTickets, auctions = unpack(TICKET_LIST[ti])
           if rank == nil then rank = 0 end
+          if type(rank) ~= 'number' then rank = tonumber(rank) end
           if totalContribution == nil then totalContribution = 0 end
           if percent == nil then percent = 0 end
           if purchaseTax == nil then purchaseTax = 0 end
@@ -618,7 +657,7 @@ function RaffleManagerMessage:New(control)
     RaffleManagerConfirmTotalRecipients:SetText("0/" .. #CurrentMail["recipients"])
     if (RAFFLEMANAGER_DEBUG) then d(guildChoice .. " (" .. #CurrentMail["recipients"] .. ")") end
 
-    progressBarUnit = (900 / #CurrentMail["recipients"])
+    progressBarUnit = (905 / #CurrentMail["recipients"])
     if (RAFFLEMANAGER_DEBUG) then d("Progress Bar Unit = " .. progressBarUnit) end
   end
 
@@ -651,20 +690,72 @@ local function SaveMailAsPending()
 end
 
 local function SendNextRecipient()
+
+  local function GetRaffleTicketsCount(raffleTickets)
+    local returnValue = 0
+    if tonumber(raffleTickets) > 0 then returnValue = tonumber(raffleTickets) / tonumber(SavedVars.ticket_cost) end
+    if returnValue <= 0 then returnValue = 0 end
+    return returnValue
+  end
+
+  local function GetRosterDataByName(recipient)
+    -- SavedVars.roster_data
+    local returnValue = nil
+    for k, memberData in ipairs(SavedVars.roster_data) do
+      if recipient == memberData.account then return memberData end
+    end
+    return returnValue
+  end
+
+  local function GetTotalSales(recipient)
+    local memberData = GetRosterDataByName(recipient)
+    if SavedVars.data_range == 10 then return tonumber(memberData.sales10)
+    elseif SavedVars.data_range == 30 then return tonumber(memberData.sales30) end
+  end
+
+  local function GetTotalPurchases(recipient)
+    local memberData = GetRosterDataByName(recipient)
+    if SavedVars.data_range == 10 then return tonumber(memberData.purchases10)
+    elseif SavedVars.data_range == 30 then return tonumber(memberData.purchases30) end
+  end
+
+  local function GetSalesTax(recipient)
+    local memberData = GetRosterDataByName(recipient)
+    if SavedVars.data_range == 10 then return tonumber(memberData.salesTax10)
+    elseif SavedVars.data_range == 30 then return tonumber(memberData.salesTax30) end
+  end
+
+  local function GetPurchaseTax(recipient)
+    local memberData = GetRosterDataByName(recipient)
+    if SavedVars.data_range == 10 then return tonumber(memberData.purchaseTax10)
+    elseif SavedVars.data_range == 30 then return tonumber(memberData.purchaseTax30) end
+  end
+
+  local function GetBankgoldAdded(recipient)
+    local memberData = GetRosterDataByName(recipient)
+    return memberData.bankgoldAddedThisWeek
+  end
+
   local subject = PendingMail["subject"]
   local mailBody = PendingMail["body"]
   local body = ""
 
   RAFFLEMANAGER_ACTIVE = true
   local recipient = PendingMail["recipients"][recipientID]
+  local memberData = GetRosterDataByName(recipient)
   local rank = RANK_LOOKUP[recipient]
-  local totalContribution = TOTAL_CONTRIBUTION_LOOKUP[recipient]
+  local totalContribution = tonumber(TOTAL_CONTRIBUTION_LOOKUP[recipient])
   local percent = PERCENT_LOOKUP[recipient]
-  local purchaseTax = PURCHASE_TAX_LOOKUP[recipient]
-  local raffleTickets = RAFFLE_TICKETS_LOOKUP[recipient]
-  local auctions = AUCTIONS_LOOKUP[recipient]
-  body = string.format("Hello %s,\n\n", recipient)
-  body = body .. zo_strformat(mailBody, rank, totalContribution, percent, purchaseTax, raffleTickets, auctions)
+  local sales = GetTotalSales(recipient)
+  local purchases = GetTotalPurchases(recipient)
+  local salesTax = GetSalesTax(recipient)
+  local purchaseTax = GetPurchaseTax(recipient)
+  local raffleTickets = GetRaffleTicketsCount(RAFFLE_TICKETS_LOOKUP[recipient])
+  local auctions = tonumber(AUCTIONS_LOOKUP[recipient])
+  local goldAdded = GetBankgoldAdded(recipient)
+
+  body = string.format("Hello %s,\n\nSales: %s\nSales tax: %s\nPurchases: %s\nPurchase tax: %s\nGold Deposits: %s\n\n", recipient, ZO_LocalizeDecimalNumber(sales), ZO_LocalizeDecimalNumber(salesTax), ZO_LocalizeDecimalNumber(purchases), ZO_LocalizeDecimalNumber(purchaseTax), ZO_LocalizeDecimalNumber(goldAdded))
+  body = body .. zo_strformat(mailBody, rank, ZO_LocalizeDecimalNumber(totalContribution), percent, ZO_LocalizeDecimalNumber(purchaseTax), raffleTickets, ZO_LocalizeDecimalNumber(auctions))
 
   if not (mailBoxOpen) then RequestOpenMailbox() end
 
@@ -908,23 +999,13 @@ end
 function RaffleManagerImportField_OnTextChanged(self)
   local text = RaffleManagerExportImportField:GetText()
 
-  local list = { zo_strsplit("|", text) }
+  local list = { zo_strsplit("&", text) }
 
   TICKET_LIST = {}
 
   for _, v in ipairs(list) do
     table.insert(TICKET_LIST, { zo_strsplit(",", v) })
   end
-end
-
--- Cost field
-
-function RaffleManagerMessageCostField_OnTextChanged(self)
-  TICKET_COST = tonumber(RaffleManagerExportTicketCostField:GetText())
-
-  --[[if SavedVars then
-    SavedVars.ticket_cost = TICKET_COST
-  end]]--
 end
 
 -- Subject Field
@@ -963,7 +1044,7 @@ function RaffleManagerMessageBodyField_OnTextChanged(self)
     SavedVars.body = CurrentMail["body"]
   end
   local CharCountBody = CharCounter(CurrentMail["body"])
-  RaffleManagerMessageCharacterLimit:SetText(CharCountBody .. "/700")
+  RaffleManagerMessageCharacterLimit:SetText(CharCountBody .. "/550")
 end
 
 -- Scroll List
@@ -1021,6 +1102,50 @@ function RaffleManagerMessage_OnInitialized(self)
 end
 
 -------------------------------------------------------------------------------
+-- LAM
+-------------------------------------------------------------------------------
+
+local function LibAddonInit()
+  local panelData = {
+    type = 'panel',
+    name = ADDON_NAME,
+    displayName = 'Raffle Manager',
+    author = "nooblybear, |cFF9B15Sharlikran|r",
+    version = ADDON_VERSION,
+    -- registerForRefresh = true,
+    -- registerForDefaults = true,
+  }
+
+  local optionsData = {}
+  optionsData[#optionsData + 1] = {
+    type = "header",
+    name = ADDON_NAME,
+    width = "full",
+  }
+  optionsData[#optionsData + 1] = {
+    type = "editbox",
+    name = "Raffle Ticket Cost",
+    isMultiline = false,
+    textType = TEXT_TYPE_NUMERIC,
+    getFunc = function() return SavedVars.ticket_cost end,
+    setFunc = function(value) SavedVars.ticket_cost = value end,
+    default = DefaultVars.ticket_cost,
+  }
+  optionsData[#optionsData + 1] = {
+    type = 'dropdown',
+    name = "Data Range",
+    choices = { "10 Days", "30 Days", },
+    choicesValues = { 10, 30, },
+    getFunc = function() return SavedVars.data_range end,
+    setFunc = function(value) SavedVars.data_range = value end,
+    default = DefaultVars.data_range,
+  }
+
+  LAM:RegisterAddonPanel('RaffleManagerOptions', panelData)
+  LAM:RegisterOptionControls('RaffleManagerOptions', optionsData)
+end
+
+-------------------------------------------------------------------------------
 -- ADDON LOADED
 -------------------------------------------------------------------------------
 
@@ -1033,25 +1158,14 @@ local function OnAddonLoaded(eventCode, addonName)
 
   SavedVars = ZO_SavedVars:NewAccountWide(SAVEDVARS_NAME, SAVEDVARS_VERSION, nil, DefaultVars)
 
+  LibAddonInit()
+
   SLASH_COMMANDS["/ram"] = RaffleManagerWindow_Toggle
 
-  if SavedVars then
-    if SavedVars.body then
-      CurrentMail["body"] = SavedVars.body
-      RaffleManagerMessageBodyField:SetText(SavedVars.body)
-    end
-    if SavedVars.subject then
-      CurrentMail["subject"] = SavedVars.subject
-      RaffleManagerMessageSubjectField:SetText(SavedVars.subject)
-    end
-    --[[if SavedVars.cost then
-      TICKET_COST = tonumber(SavedVars.cost)
-    else
-      TICKET_COST = 1000
-    end
-    RaffleManagerExportTicketCostField:SetText(TICKET_COST)
-    ]]--
-  end
+  CurrentMail["body"] = SavedVars.body
+  RaffleManagerMessageBodyField:SetText(SavedVars.body)
+  CurrentMail["subject"] = SavedVars.subject
+  RaffleManagerMessageSubjectField:SetText(SavedVars.subject)
 
   EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_MAIL_OPEN_MAILBOX, OnMailOpenMailBox)
   EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_MAIL_CLOSE_MAILBOX, OnMailCloseMailBox)

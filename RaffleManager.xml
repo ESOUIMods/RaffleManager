@@ -2,8 +2,10 @@
     <Controls>
         <Label name="RaffleManagerHeaderLabel" font="ZoFontWinH4" modifyTextType="UPPERCASE" wrapMode="ELLIPSIS" virtual="true" />
         <Label name="RaffleManagerLabelField" horizontalAlignment="LEFT" font="ZoFontGame" wrapMode="ELLIPSIS" virtual="true" />
+
+        <!-- Confirm Window List Data Row -->
         <Control name="RaffleManagerConfirmRow" mouseEnabled="true" virtual="true">
-            <Dimensions x="900" y="28"/>
+            <Dimensions x="905" y="28"/>
             <OnMouseEnter>
                 RaffleManagerConfirmRow_OnMouseEnter(self)
             </OnMouseEnter>
@@ -42,7 +44,7 @@
                 </Label>
                 <Label name="$(parent)Auctions" inherits="RaffleManagerLabelField">
                     <Anchor point="LEFT" relativeTo="$(parent)RaffleTickets" relativePoint="RIGHT" offsetX="8" />
-                    <Dimensions x="80" />
+                    <Dimensions x="85" />
                 </Label>
                 <Label name="$(parent)Mail" inherits="RaffleManagerLabelField">
                     <Anchor point="LEFT" relativeTo="$(parent)Auctions" relativePoint="RIGHT" offsetX="8" />
@@ -50,6 +52,8 @@
                 </Label>
             </Controls>
         </Control>
+
+        <!-- Information Confirm Window -->
         <Control name="RaffleManagerConfirm" virtual="true" hidden="true">
             <AnchorFill />
             <OnInitialized>
@@ -58,7 +62,7 @@
             <Controls>
                 <Control name="$(parent)Headers">
                     <Anchor point="TOPLEFT" offsetX="-2" offsetY="51" />
-                    <Dimensions x="900" y="28" />
+                    <Dimensions x="905" y="28" />
                     <Controls>
                         <Label name="$(parent)ID" inherits="RaffleManagerHeaderLabel" text="ID">
                             <Dimensions x="32" />
@@ -92,7 +96,7 @@
                             <Anchor point="LEFT" relativeTo="$(parent)PurchaseTax" relativePoint="RIGHT" offsetX="8" />
                         </Label>
                         <Label name="$(parent)Auctions" inherits="RaffleManagerHeaderLabel" text="Auctions">
-                            <Dimensions x="80" />
+                            <Dimensions x="85" />
                             <Anchor point="LEFT" relativeTo="$(parent)RaffleTickets" relativePoint="RIGHT" offsetX="8" />
                         </Label>
                         <Control name="$(parent)Mail" inherits="ZO_SortHeader">
@@ -107,14 +111,14 @@
                 <Control name="$(parent)List" inherits="ZO_ScrollList">
                     <Anchor point="TOPLEFT" relativeTo="$(parent)Headers" relativePoint="BOTTOMLEFT" />
                     <Anchor point="TOPRIGHT" relativeTo="$(parent)Headers" relativePoint="BOTTOMRIGHT" />
-                    <Dimensions x="900" y="400" />
+                    <Dimensions x="905" y="400" />
                 </Control>
                 <Backdrop name="$(parent)ProgressBG" inherits="ZO_EditBackdrop" hidden="true">
-                    <Anchor point="TOPLEFT" relativeTo="$(parent)List" relativePoint="BOTTOMLEFT" />
-                    <Dimensions x="900" y="24" />
+                    <Anchor point="TOPLEFT" relativeTo="$(parent)List" relativePoint="BOTTOMLEFT" offsetX="10" />
+                    <Dimensions x="905" y="24" />
                 </Backdrop>
                 <StatusBar name="$(parent)ProgressBar" color="EECA2A">
-                    <Anchor point="TOPLEFT" relativeTo="$(parent)List" relativePoint="BOTTOMLEFT" />
+                    <Anchor point="TOPLEFT" relativeTo="$(parent)List" relativePoint="BOTTOMLEFT" offsetX="10" />
                     <Dimensions x="0" y="24" />
                 </StatusBar>
                 <Label name="$(parent)TotalRecipients" font="ZoFontGameLarge" color="3A92FF" text="">
@@ -125,10 +129,12 @@
                     <Dimensions x="0" y="24" />
                 </StatusBar>
                 <Label name="$(parent)LastRecipient" font="ZoFontWinH3" text="">
-                    <Anchor point="TOP" relativeTo="$(parent)List" relativePoint="BOTTOM" offsetY="-32" />
+                    <Anchor point="TOP" relativeTo="$(parent)List" relativePoint="BOTTOM" offsetX="10" offsetY="-32" />
                 </Label>
             </Controls>
         </Control>
+
+        <!-- Outgoing Message Window -->
         <Control name="RaffleManagerMessage" virtual="true" hidden="true">
             <AnchorFill />
             <OnInitialized>
@@ -137,11 +143,11 @@
             <Controls>
                 <Control name="$(parent)GuildDropdown" inherits="ZO_ComboBox">
                     <Anchor point="TOPLEFT" offsetX="13" offsetY="58" />
-                    <Dimensions x="900" y="28" />
+                    <Dimensions x="905" y="28" />
                 </Control>
                 <Backdrop name="$(parent)Subject" inherits="ZO_EditBackdrop">
                     <Anchor point="TOPLEFT" relativeTo="$(parent)GuildDropdown" relativePoint="TOPLEFT" offsetX="0" offsetY="35" />
-                    <Dimensions x="900" y="28" />
+                    <Dimensions x="905" y="28" />
                     <Controls>
                         <EditBox name="$(parent)Field" inherits="ZO_DefaultEditForBackdrop" font="ZoFontGameBold">
                             <OnInitialized>
@@ -199,11 +205,13 @@
                         RaffleManagerMessageContinueButton_OnClicked(self)
                     </OnClicked>
                 </Button>
-                <Label name="$(parent)CharacterLimit" font="ZoFontWinH3" text="0/700">
+                <Label name="$(parent)CharacterLimit" font="ZoFontWinH3" text="0/550">
                     <Anchor point="TOPRIGHT" relativeTo="$(parent)Body" relativePoint="BOTTOMRIGHT" offsetY="3" />
                 </Label>
             </Controls>
         </Control>
+
+        <!-- Input and Export Window -->
         <Control name="RaffleManagerExport" virtual="true" hidden="true">
             <AnchorFill />
             <OnInitialized>
@@ -242,19 +250,12 @@
                         ReloadUI()
                     </OnClicked>
                 </Button>
-                <Label name="$(parent)DaysLabel" font="ZoFontWinH4" text="Days" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL">
-                    <Anchor point="TOPLEFT" relativeTo="$(parent)ExportMailButton" relativePoint="BOTTOMLEFT" offsetY="12" />
-                </Label>
-                <Control name="$(parent)DaysDropdown" inherits="ZO_ComboBox">
-                    <Anchor point="LEFT" relativeTo="$(parent)DaysLabel" relativePoint="RIGHT" offsetX="48" />
-                    <Dimensions x="80" y="28" />
-                </Control>
                 <Label name="$(parent)EditBoxMail" font="ZoFontWinH3" text="Mail Merge Code:" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL">
-                    <Anchor point="TOPLEFT" relativeTo="$(parent)DaysLabel" relativePoint="BOTTOMLEFT" offsetY="12" />
+                    <Anchor point="TOPLEFT" relativeTo="$(parent)ExportMailButton" relativePoint="BOTTOMLEFT" offsetY="12" />
                 </Label>
                 <Backdrop name="$(parent)Import" inherits="ZO_EditBackdrop">
                     <Anchor point="TOPLEFT" relativeTo="$(parent)EditBoxMail" relativePoint="BOTTOMLEFT" offsetX="-10" offsetY="8" />
-                    <Dimensions x="900" y="260" />
+                    <Dimensions x="905" y="260" />
                     <Controls>
                         <EditBox name="$(parent)Field" inherits="ZO_DefaultEditMultiLineForBackdrop" font="ZoFontGameBold">
                             <OnTextChanged>
@@ -265,9 +266,11 @@
                 </Backdrop>
             </Controls>
         </Control>
+
+        <!-- Raffle Manager Window -->
         <TopLevelControl name="RaffleManagerWindow" movable="true" mouseEnabled="true" hidden="true">
             <Anchor point="LEFT" relativeTo="GuiRoot" offsetX="500" offsetY="0" />
-            <Dimensions x="920" y="520" />
+            <Dimensions x="925" y="520" />
             <OnInitialized>
                 RaffleManagerWindow_OnInitialized(self)
             </OnInitialized>
@@ -280,12 +283,14 @@
                     <Anchor point="TOPLEFT" offsetX="-40" offsetY="47" />
                     <Anchor point="TOPRIGHT" offsetX="40" offsetY="47" />
                 </Texture>
-                <Label name="$(parent)Title" font="ZoFontWindowTitle" text="RaffleManager">
+                <Label name="$(parent)Title" font="ZoFontWindowTitle" text="SI_RAFFLEMANAGER_WINDOW_NAME">
                     <Anchor point="TOPLEFT" offsetX="9" offsetY="7" />
                 </Label>
-                <Button name="$(parent)CloseButton" inherits="ZO_CloseButton">
-                    <Anchor point="TOPRIGHT" offsetX="-7" offsetY="5" />
-                    <Dimensions x="18" y="20" />
+                <Button name="$(parent)CloseButton" inheritAlpha="true">
+                    <Anchor point="TOPRIGHT" relativePoint="TOPRIGHT" offsetX="-2" offsetY="2" />
+                    <Dimensions x="42" y="42"/>
+                    <Textures normal="/esoui/art/hud/radialicon_cancel_up.dds"
+                              mouseOver="/esoui/art/hud/radialicon_cancel_over.dds"/>
                     <OnClicked>
                         RaffleManagerWindowCloseButton_OnClicked(self)
                     </OnClicked>
@@ -310,5 +315,6 @@
                 </Control>
             </Controls>
         </TopLevelControl>
+
     </Controls>
 </GuiXml>
