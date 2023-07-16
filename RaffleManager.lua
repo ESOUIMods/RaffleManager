@@ -2,7 +2,7 @@ local internal = _G["LibGuildStore_Internal"]
 local LAM = LibAddonMenu2
 
 local ADDON_NAME = "RaffleManager"
-local ADDON_VERSION = "5.0.5"
+local ADDON_VERSION = "5.0.6"
 local SAVEDVARS_NAME = "RaffleManager_SavedVariables"
 local SAVEDVARS_VERSION = 1
 
@@ -17,6 +17,11 @@ local RAFFLEMANAGER_MESSAGE = nil
 local RAFFLEMANAGER_INBOX = nil
 local RAFFLEMANAGER_SENT = nil
 local RAFFLEMANAGER_MAIL_MAX_BODY_CHARACTERS = 550
+
+local RAFFLEMANAGER_MAIL_TYPE_MAX = 3
+local RAFFLEMANAGER_MAIL_TYPE_THANKS = 1
+local RAFFLEMANAGER_MAIL_TYPE_WARN = 2
+local RAFFLEMANAGER_MAIL_TYPE_CUSTOM = 3
 
 local TOTAL_CONTRIBUTION_LOOKUP = {}
 local RANK_LOOKUP = {}
@@ -55,7 +60,8 @@ local Guilds = {
 }
 
 local SELECTED_GUILD = nil
-local TICKET_LIST = {}
+local SELECTED_MAIL_TYPE = RAFFLEMANAGER_MAIL_TYPE_THANKS
+local RECIPIENT_DATA = {}
 local ROSTER_EXPORT = {}
 
 local GuildChoice = {}
@@ -148,7 +154,6 @@ function RaffleManager_ParseRoster()
       bankgoldAddedLastWeek = 0,
       rank = rank_name,
     }
-
 
     local masterMerchantSalesAccount, masterMerchantPurchasesAccount
     local masterMerchantSales = internal.guildSales[gname].sellers
@@ -555,11 +560,37 @@ function RaffleManagerExport:New(control)
   manager.guildList:SetSpacing(4)
   manager.guildList:ClearItems()
 
+  manager.mailTypeList = ZO_ComboBox_ObjectFromContainer(GetControl(control, "MailTypeDropdown"))
+  manager.mailTypeList:SetSortsItems(false)
+  manager.mailTypeList:SetSpacing(4)
+  manager.mailTypeList:ClearItems()
+
   manager.confirmations = control:GetNamedChild("ImportField")
   manager.confirmations:SetMaxInputChars(2000)
 
-  local function OnGuildSelected (_, name, choice)
+  local function OnGuildSelected(_, name, choice)
     SELECTED_GUILD = name
+  end
+
+  local function OnMailTypeSelected(_, mailType, choice)
+    local mailTypeSelections = {
+      ["Thanks"] = RAFFLEMANAGER_MAIL_TYPE_THANKS,
+      ["Warn"] = RAFFLEMANAGER_MAIL_TYPE_WARN,
+      ["Custom"] = RAFFLEMANAGER_MAIL_TYPE_CUSTOM,
+    }
+    SELECTED_MAIL_TYPE = mailTypeSelections[mailType]
+  end
+
+  local mailTypeSelections = {
+    [RAFFLEMANAGER_MAIL_TYPE_THANKS] = "Thanks",
+    [RAFFLEMANAGER_MAIL_TYPE_WARN] = "Warn",
+    [RAFFLEMANAGER_MAIL_TYPE_CUSTOM] = "Custom",
+  }
+
+  for mailType = 1, RAFFLEMANAGER_MAIL_TYPE_MAX do
+    d(mailTypeSelections[mailType])
+    local dayEntry = manager.mailTypeList:CreateItemEntry(mailTypeSelections[mailType], OnMailTypeSelected)
+    manager.mailTypeList:AddItem(dayEntry)
   end
 
   for guildIndex = 1, GetNumGuilds() do
@@ -616,9 +647,9 @@ function RaffleManagerMessage:New(control)
     for numGuildMembers = 1, GetNumGuildMembers(guildChoiceID) do
       local name, note, rankIndex, playerStatus, secsSinceLogoff = GetGuildMemberInfo(guildChoiceID, numGuildMembers)
 
-      if #TICKET_LIST >= 1 then
-        for ti = 1, #TICKET_LIST do
-          local n, rank, totalContribution, percent, purchaseTax, raffleTickets, auctions = unpack(TICKET_LIST[ti])
+      if #RECIPIENT_DATA >= 1 then
+        for ti = 1, #RECIPIENT_DATA do
+          local recipientName, rank, totalContribution, percent, purchaseTax, raffleTickets, auctions = unpack(RECIPIENT_DATA[ti])
           if rank == nil then rank = 0 end
           if type(rank) ~= 'number' then rank = tonumber(rank) end
           if totalContribution == nil then totalContribution = 0 end
@@ -626,8 +657,8 @@ function RaffleManagerMessage:New(control)
           if purchaseTax == nil then purchaseTax = 0 end
           if raffleTickets == nil then raffleTickets = 0 end
           if auctions == nil then auctions = 0 end
-          n = n:gsub("%p", "%%%1")
-          if name:match("^@" .. n .. "$") ~= nil then
+          recipientName = recipientName:gsub("%p", "%%%1")
+          if name:match("^@" .. recipientName .. "$") ~= nil then
             RANK_LOOKUP[name] = rank
             TOTAL_CONTRIBUTION_LOOKUP[name] = totalContribution
             PERCENT_LOOKUP[name] = percent
@@ -750,12 +781,19 @@ local function SendNextRecipient()
   local purchases = GetTotalPurchases(recipient)
   local salesTax = GetSalesTax(recipient)
   local purchaseTax = GetPurchaseTax(recipient)
-  local raffleTickets = GetRaffleTicketsCount(RAFFLE_TICKETS_LOOKUP[recipient])
+  local raffleTicketCount = GetRaffleTicketsCount(RAFFLE_TICKETS_LOOKUP[recipient])
+  local raffleTicketGoldDeposited = tonumber(RAFFLE_TICKETS_LOOKUP[recipient])
   local auctions = tonumber(AUCTIONS_LOOKUP[recipient])
   local goldAdded = GetBankgoldAdded(recipient)
 
-  body = string.format("Hello %s,\n\nSales: %s\nSales tax: %s\nPurchases: %s\nPurchase tax: %s\nGold Deposits: %s\n\n", recipient, ZO_LocalizeDecimalNumber(sales), ZO_LocalizeDecimalNumber(salesTax), ZO_LocalizeDecimalNumber(purchases), ZO_LocalizeDecimalNumber(purchaseTax), ZO_LocalizeDecimalNumber(goldAdded))
-  body = body .. zo_strformat(mailBody, rank, ZO_LocalizeDecimalNumber(totalContribution), percent, ZO_LocalizeDecimalNumber(purchaseTax), raffleTickets, ZO_LocalizeDecimalNumber(auctions))
+  if SELECTED_MAIL_TYPE == RAFFLEMANAGER_MAIL_TYPE_WARN then
+    body = string.format("Hello %s,\n\nSales: %s\nSales tax: %s\nPurchases: %s\nPurchase tax: %s\nGold Deposits: %s\n\n", recipient, ZO_LocalizeDecimalNumber(sales), ZO_LocalizeDecimalNumber(salesTax), ZO_LocalizeDecimalNumber(purchases), ZO_LocalizeDecimalNumber(purchaseTax), ZO_LocalizeDecimalNumber(goldAdded))
+    body = body .. zo_strformat(mailBody, rank, ZO_LocalizeDecimalNumber(totalContribution), percent, ZO_LocalizeDecimalNumber(purchaseTax), raffleTicketCount, ZO_LocalizeDecimalNumber(auctions))
+  end
+  if SELECTED_MAIL_TYPE == RAFFLEMANAGER_MAIL_TYPE_THANKS then
+    body = string.format("Hello %s,\n\n", recipient)
+    body = body .. zo_strformat(mailBody, raffleTicketCount, ZO_LocalizeDecimalNumber(raffleTicketGoldDeposited))
+  end
 
   if not (mailBoxOpen) then RequestOpenMailbox() end
 
@@ -1001,10 +1039,10 @@ function RaffleManagerImportField_OnTextChanged(self)
 
   local list = { zo_strsplit("&", text) }
 
-  TICKET_LIST = {}
+  RECIPIENT_DATA = {}
 
   for _, v in ipairs(list) do
-    table.insert(TICKET_LIST, { zo_strsplit(",", v) })
+    table.insert(RECIPIENT_DATA, { zo_strsplit(",", v) })
   end
 end
 
